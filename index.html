@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>グループ分けツール</title>
+
+  <!-- PWA設定 -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4facfe">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="グループ分けツール">
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "メイリオ", sans-serif;
+      padding: 15px;
+      background: linear-gradient(135deg, #f0f4f8, #d9e6f2);
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.8em;
+      margin-bottom: 10px;
+    }
+    p {
+      text-align: center;
+      font-size: 0.9em;
+      color: #555;
+      margin-bottom: 15px;
+    }
+    textarea {
+      width: 100%;
+      height: 150px;
+      padding: 12px;
+      font-size: 16px;
+      box-sizing: border-box;
+      resize: vertical;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+    button {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      font-size: 16px;
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    button:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
+    #result {
+      white-space: pre-wrap;
+      background-color: #fff;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      margin-top: 20px;
+      font-family: "Courier New", monospace;
+      font-size: 15px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 1.5em;
+      }
+      textarea {
+        height: 120px;
+      }
+      button {
+        font-size: 15px;
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>グループ分けツール</h1>
+  <p>※名前は改行で1人ずつ入力してください（「ちゃん」は自動で付きます）</p>
+  <textarea id="names" placeholder="例：&#10;あ&#10;い&#10;う&#10;..."></textarea>
+  
+  <button onclick="makeGroups()">🎯 グループ作成</button>
+  <button onclick="resetResult()">🗑 履歴リセット</button>
+  <button onclick="copyResult()">📋 結果をコピー</button>
+
+  <div id="result"></div>
+
+  <script>
+    let historyLog = {};
+
+    function makeGroups() {
+      const input = document.getElementById("names").value;
+      let names = input
+        .split("\n")
+        .map((n) => n.trim())
+        .filter((n) => n.length > 0)
+        .map((n) => (n.endsWith("ちゃん") ? n.slice(0, -2) : n));
+
+      if (names.length === 0) return;
+
+      for (let i = names.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [names[i], names[j]] = [names[j], names[i]];
+      }
+
+      const groupSizes = [];
+      let remaining = names.length;
+      while (remaining > 0) {
+        if (remaining === 13) groupSizes.push(4, 3, 3, 3), (remaining = 0);
+        else if (remaining === 10) groupSizes.push(4, 3, 3), (remaining = 0);
+        else if (remaining === 9) groupSizes.push(3, 3, 3), (remaining = 0);
+        else if (remaining === 7) groupSizes.push(4, 3), (remaining = 0);
+        else if (remaining === 6) groupSizes.push(3, 3), (remaining = 0);
+        else if (remaining === 5) groupSizes.push(3, 2), (remaining = 0);
+        else if (remaining >= 4) groupSizes.push(4), (remaining -= 4);
+        else groupSizes.push(remaining), (remaining = 0);
+      }
+
+      const groups = [];
+      let index = 0;
+      for (let size of groupSizes) {
+        groups.push(names.slice(index, index + size).map((n) => n + "ちゃん"));
+        index += size;
+      }
+
+      const groupLabels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      const now = new Date();
+      const dateStr =
+        now.toLocaleDateString("ja-JP", {
+          year: "2-digit",
+          month: "2-digit",
+          day: "2-digit",
+        }) +
+        " " +
+        now.toTimeString().slice(0, 5);
+
+      let output = "☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆\n";
+      output += `${dateStr} 時点      左の人から貼っていこー！\n\n`;
+
+      groups.forEach((group, i) => {
+        const label = `ｸﾞﾙｰﾌﾟ${groupLabels[i]}（${group.length}人）：`;
+        output += `${label}${group.join("、")}\n-------------------------------\n`;
+      });
+
+      output += "\n☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆☆";
+
+      document.getElementById("result").innerText = output;
+
+      for (let group of groups) {
+        for (let member of group) {
+          if (!historyLog[member]) historyLog[member] = new Set();
+          group.forEach((other) => {
+            if (other !== member) historyLog[member].add(other);
+          });
+        }
+      }
+    }
+
+    function resetResult() {
+      document.getElementById("result").innerText = "";
+      historyLog = {};
+    }
+
+    function copyResult() {
+      const text = document.getElementById("result").innerText;
+      navigator.clipboard.writeText(text).then(
+        () => alert("結果をコピーしました！"),
+        (err) => alert("コピーに失敗しました: " + err)
+      );
+    }
+
+    // PWAのService Worker登録
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log("Service Worker registered"));
+    }
+  </script>
+</body>
+</html>
